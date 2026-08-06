@@ -35,7 +35,8 @@
 - 前端：http://localhost:3001
 - 后端 API：http://localhost:8080
 - API 文档：http://localhost:8080/docs
-- 默认管理员：`admin@nudm.dev` / `admin123`
+
+> 说明：开发环境的访问地址与默认管理员账号仅由开发脚本在本地生成，请勿在生产环境使用，并妥善管理相关密钥。
 
 ## 生产部署
 
