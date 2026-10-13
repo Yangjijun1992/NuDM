@@ -6,7 +6,7 @@ import re
 import uuid
 from datetime import datetime
 from difflib import SequenceMatcher
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import async_session_factory
 from app.models.paper import Paper, PaperSource
@@ -178,9 +178,15 @@ async def _get_or_create_paper_from_arxiv(
     ))
 
     authors_parsed = split_authors_affiliations(ap.authors)
-    for i, (name, aff) in enumerate(authors_parsed):
+    seen_author_ids: set[uuid.UUID] = set()
+    author_order = 0
+    for name, aff in authors_parsed:
         author_id = await _get_or_create_author(db, name, aff)
-        db.add(PaperAuthor(paper_id=paper.id, author_id=author_id, author_order=i))
+        if author_id in seen_author_ids:
+            continue
+        seen_author_ids.add(author_id)
+        db.add(PaperAuthor(paper_id=paper.id, author_id=author_id, author_order=author_order))
+        author_order += 1
 
     topic_ids = await _match_paper_to_topics(db, ap.title, ap.abstract)
     for tid in topic_ids:
@@ -321,10 +327,16 @@ async def _import_from_inspire(
         external_id=ip.inspire_id,
     ))
 
+    seen_author_ids: set[uuid.UUID] = set()
+    author_order = 0
     for i, name in enumerate(ip.authors):
         aff = ip.author_affiliations[i] if i < len(ip.author_affiliations) else ""
         author_id = await _get_or_create_author(db, name, aff)
-        db.add(PaperAuthor(paper_id=paper.id, author_id=author_id, author_order=i))
+        if author_id in seen_author_ids:
+            continue
+        seen_author_ids.add(author_id)
+        db.add(PaperAuthor(paper_id=paper.id, author_id=author_id, author_order=author_order))
+        author_order += 1
 
     topic_ids = await _match_paper_to_topics(db, ip.title, ip.abstract)
     for tid in topic_ids:
@@ -338,6 +350,17 @@ async def _import_from_inspire(
     await _sync_to_es(paper, db)
     await _notify_subscribers(paper, db)
     return paper.id
+
+
+async def _recompute_topic_counts(db: AsyncSession) -> None:
+    """回写各专题的论文计数（去规范化列，供专题列表/详情直接读取）"""
+    rows = await db.execute(
+        select(PaperTopic.topic_id, func.count()).group_by(PaperTopic.topic_id)
+    )
+    count_map = {tid: cnt for tid, cnt in rows.all()}
+    topics = (await db.execute(select(Topic))).scalars().all()
+    for t in topics:
+        t.paper_count = count_map.get(t.id, 0)
 
 
 async def run_crawl_pipeline() -> dict:
@@ -374,15 +397,18 @@ async def run_crawl_pipeline() -> dict:
                 arxiv_papers = await search_arxiv_batch()
                 result["arxiv_fetched"] = len(arxiv_papers)
 
+                arxiv_new = 0
                 for ap in arxiv_papers:
                     paper_id = await _get_or_create_paper_from_arxiv(
                         db, ap, arxiv_source.id
                     )
                     if paper_id:
-                        result["papers_new"] += 1
+                        arxiv_new += 1
 
+                result["papers_new"] += arxiv_new
                 arxiv_task.status = "success"
                 arxiv_task.papers_fetched = len(arxiv_papers)
+                arxiv_task.papers_new = arxiv_new
                 arxiv_task.finished_at = datetime.utcnow()
             except Exception as e:
                 logger.exception("arXiv crawl failed")
@@ -405,13 +431,16 @@ async def run_crawl_pipeline() -> dict:
                 inspire_papers = await search_inspire()
                 result["inspire_fetched"] = len(inspire_papers)
 
+                inspire_new = 0
                 for ip in inspire_papers:
                     paper_id = await _import_from_inspire(db, ip, inspire_source.id)
                     if paper_id:
-                        result["papers_new"] += 1
+                        inspire_new += 1
 
+                result["papers_new"] += inspire_new
                 inspire_task.status = "success"
                 inspire_task.papers_fetched = len(inspire_papers)
+                inspire_task.papers_new = inspire_new
                 inspire_task.finished_at = datetime.utcnow()
             except Exception as e:
                 logger.exception("INSPIRE crawl failed")
@@ -420,6 +449,7 @@ async def run_crawl_pipeline() -> dict:
                 inspire_task.finished_at = datetime.utcnow()
                 result["errors"].append(f"INSPIRE: {e}")
 
+        await _recompute_topic_counts(db)
         await db.commit()
 
     return result

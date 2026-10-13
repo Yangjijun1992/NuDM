@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.models.topic import Topic, Experiment
+from app.models.topic import Topic, Experiment, PaperTopic
 from app.schemas.topic import TopicResponse, TopicDetail, ExperimentResponse
 
 router = APIRouter(prefix="/topics", tags=["topics"])
@@ -11,9 +11,13 @@ router = APIRouter(prefix="/topics", tags=["topics"])
 @router.get("", response_model=list[TopicResponse])
 async def list_topics(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Topic).where(Topic.is_active == True).order_by(Topic.sort_order)
+        select(Topic, func.count(PaperTopic.paper_id))
+        .outerjoin(PaperTopic, PaperTopic.topic_id == Topic.id)
+        .where(Topic.is_active == True)
+        .group_by(Topic.id)
+        .order_by(Topic.sort_order)
     )
-    topics = result.scalars().all()
+    rows = result.all()
     return [
         TopicResponse(
             id=str(t.id),
@@ -24,11 +28,11 @@ async def list_topics(db: AsyncSession = Depends(get_db)):
             sort_order=t.sort_order,
             icon=t.icon,
             keywords=t.keywords,
-            paper_count=t.paper_count,
+            paper_count=count,
             is_active=t.is_active,
             created_at=t.created_at.isoformat(),
         )
-        for t in topics
+        for t, count in rows
     ]
 
 
@@ -46,6 +50,11 @@ async def get_topic(slug: str, db: AsyncSession = Depends(get_db)):
     )
     experiments = exp_result.scalars().all()
 
+    count_result = await db.execute(
+        select(func.count()).select_from(PaperTopic).where(PaperTopic.topic_id == topic.id)
+    )
+    paper_count = count_result.scalar() or 0
+
     return TopicDetail(
         id=str(topic.id),
         name=topic.name,
@@ -55,7 +64,7 @@ async def get_topic(slug: str, db: AsyncSession = Depends(get_db)):
         sort_order=topic.sort_order,
         icon=topic.icon,
         keywords=topic.keywords,
-        paper_count=topic.paper_count,
+        paper_count=paper_count,
         is_active=topic.is_active,
         created_at=topic.created_at.isoformat(),
         experiments=[
