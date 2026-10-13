@@ -46,7 +46,7 @@ async def generate_summary(paper_id: str) -> dict:
 
         try:
             response = await client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=settings.OPENAI_MODEL,
                 messages=[
                     {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
                     {"role": "user", "content": f"标题: {paper.title}\n\n摘要: {text[:2000]}"},
@@ -71,7 +71,7 @@ async def generate_summary(paper_id: str) -> dict:
                 existing.method = data.get("method", "")
                 existing.result = data.get("result", "")
                 existing.keywords_extracted = data.get("keywords", [])
-                existing.model = "gpt-4o-mini"
+                existing.model = settings.OPENAI_MODEL
                 existing.tokens_used = tokens_used
                 existing.quality_flag = "unreviewed"
                 existing.generated_at = datetime.utcnow()
@@ -83,7 +83,7 @@ async def generate_summary(paper_id: str) -> dict:
                     method=data.get("method", ""),
                     result=data.get("result", ""),
                     keywords_extracted=data.get("keywords", []),
-                    model="gpt-4o-mini",
+                    model=settings.OPENAI_MODEL,
                     tokens_used=tokens_used,
                 ))
 

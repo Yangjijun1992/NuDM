@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     ELASTICSEARCH_URL: str = "http://localhost:9200"
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
     ARXIV_API_URL: str = "https://export.arxiv.org/api/query"
     INSPIRE_API_URL: str = "https://inspirehep.net/api"
