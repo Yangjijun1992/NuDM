@@ -27,6 +27,5 @@ celery_app.conf.update(
             "schedule": 3600.0,
         },
     },
+    include=["app.tasks.crawl", "app.tasks.ai_tasks"],
 )
-
-celery_app.autodiscover_tasks(["app.tasks"])
