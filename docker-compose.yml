@@ -78,8 +78,11 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql+asyncpg://nudm:nudm_password@postgres:5432/nudm
+      - DATABASE_URL_SYNC=postgresql://nudm:nudm_password@postgres:5432/nudm
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - USE_SQLITE=false
     volumes:
       - ./backend:/app
 
@@ -94,8 +97,11 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql+asyncpg://nudm:nudm_password@postgres:5432/nudm
+      - DATABASE_URL_SYNC=postgresql://nudm:nudm_password@postgres:5432/nudm
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - USE_SQLITE=false
     volumes:
       - ./backend:/app
 

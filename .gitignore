@@ -10,3 +10,4 @@ docs/
 # env files
 backend/.env
 .env
+backend/celerybeat-schedule
