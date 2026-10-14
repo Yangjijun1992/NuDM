@@ -48,13 +48,13 @@ export function Header() {
         <div className="ml-auto flex items-center space-x-2">
           {user ? (
             <>
-              <Link href="/favorites">
+              <Link href="/favorites" prefetch={false}>
                 <Button variant="ghost" size="sm">收藏</Button>
               </Link>
-              <Link href="/subscriptions">
+              <Link href="/subscriptions" prefetch={false}>
                 <Button variant="ghost" size="sm">订阅</Button>
               </Link>
-              <Link href="/notifications">
+              <Link href="/notifications" prefetch={false}>
                 <Button variant="ghost" size="sm">通知</Button>
               </Link>
               <DropdownMenu>
@@ -71,16 +71,16 @@ export function Header() {
                   }
                 />
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem render={<Link href="/profile">个人中心</Link>} />
+                  <DropdownMenuItem render={<Link href="/profile" prefetch={false}>个人中心</Link>} />
                   {user.role === "admin" && (
-                    <DropdownMenuItem render={<Link href="/admin">后台管理</Link>} />
+                    <DropdownMenuItem render={<Link href="/admin" prefetch={false}>后台管理</Link>} />
                   )}
                   <DropdownMenuItem onClick={logout}>退出登录</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
-            <Link href="/auth">
+            <Link href="/auth" prefetch={false}>
               <Button variant="default" size="sm">登录</Button>
             </Link>
           )}

@@ -11,7 +11,7 @@ interface TopicCardProps {
 
 export function TopicCard({ topic }: TopicCardProps) {
   return (
-    <Link href={`/topics/${topic.slug}`}>
+    <Link href={`/topics/${topic.slug}`} prefetch={false}>
       <Card className="h-full transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">

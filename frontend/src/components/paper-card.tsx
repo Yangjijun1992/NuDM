@@ -33,7 +33,7 @@ export function PaperCard({ paper }: PaperCardProps) {
     <Card className="group transition-shadow hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <Link href={`/papers/${paper.id}`} className="flex-1 min-w-0">
+          <Link href={`/papers/${paper.id}`} prefetch={false} className="flex-1 min-w-0">
             <CardTitle
               className="text-base font-medium leading-snug transition-colors group-hover:text-primary truncate"
               dangerouslySetInnerHTML={{ __html: titleHtml }}
